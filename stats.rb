@@ -1,11 +1,8 @@
 #!/usr/bin/ruby
 require 'ruby2d'
 STDOUT.sync = true
-on :key_down do |k| exit 0 if k.key == 'escape' end
 
-module Ruby2D
-	def get_colour() [self.r, self.g, self.b, self.opacity] end
-end
+module Ruby2D def get_colour() [self.r, self.g, self.b, self.opacity] end end
 
 def main
 	$width, $height, $fps = 640, 480, 50
@@ -31,13 +28,12 @@ def main
 	read_score = File.readlines('data/data').last(7).map(&:to_i)
 	last_score = read_score[-2]
 	score = read_score[-1]
-	# puts read_score.max
 
-	if score < 250 then iqtype = 'Very Low'
-		elsif score < 500 then iqtype = 'Low'
-		elsif score < 750 then iqtype = 'Average'
-		elsif score < 900 then iqtype = 'Good'
-		else iqtype = 'Excellent'
+	if score < 250 then iqtype, you_in = 'Very Low', 0
+		elsif score < 500 then iqtype, you_in = 'Low', 1
+		elsif score < 750 then iqtype, you_in = 'Average', 2
+		elsif score < 900 then iqtype, you_in = 'Good', 3
+		else iqtype, you_in = 'Excellent', 4
 	end
 
 	game_details = <<EOF
@@ -56,6 +52,7 @@ the details.
 
 Your score:
 You have scored #{score}.
+As we like to put, "You are #{iqtype}."
 
 Your past score: #{last_score}.
 
@@ -63,8 +60,10 @@ Your last 7 scores:
 #{read_score}
 EOF
 	game_details = game_details.split("\n")
+
+	game_details_texts = []
 	game_details.each_with_index do |l, i|
-		Text.new l, font: 'fonts/Aller_Lt.ttf', x: 5, y: i * 20, size: 20, color: 'black'
+		game_details_texts << Text.new(l, font: 'fonts/Aller_Lt.ttf', x: 5, y: i * 20, size: 20, color: 'black')
 	end
 
 	note = Text.new 'NOTE: Neither this game nor these score statistics are based on real life mental test.',
@@ -82,14 +81,6 @@ EOF
 		j += 50
 	end
 	triangles.reverse!
-
-	case iqtype
-		when 'Very Low' then you_in = 0
-		when 'Low' then you_in = 1
-		when 'Average' then you_in = 2
-		when 'Good' then you_in = 3
-		when 'Excellent' then you_in = 4
-	end
 
 	a_line = Line.new color: 'black', x1: triangles[0].x3, x2: triangles[-1].x2, y1: triangles[0].y2 + 10, y2: triangles[-1].y2 + 10
 
@@ -113,16 +104,17 @@ EOF
 	you.y = triangles[you_in].y1/2 + triangles[you_in].y2/2 - you.height/2
 
 	details_raw = <<EOF
-					 VERY LOW: You have to improve yourself.
- 					LOW: You need to make some improvements.
- 					AVERAGE: Your brain's performance is normal.
- 					GOOD: Your brain works very fast.
- 					EXCELLENT: Your brain is highly flexible, ultra fast.
+					 VERY LOW: (less than 250) You have to improve yourself.
+ 					LOW: (250 to 499) You need to make some improvements.
+ 					AVERAGE: (500 to 749) Your brain's performance is normal.
+ 					GOOD: (750 to 899) Your brain works very fast.
+ 					EXCELLENT: (more than 899) Your brain is highly flexible.
 EOF
-		details_raw = details_raw.split("\n")
+	details_raw = details_raw.split("\n")
 
 	height = 0
 	details_info = []
+
 	details_raw.each_with_index do |c, i|
 		details = Text.new(c, font: 'fonts/Aller_Lt.ttf', color: triangles[i].get_colour, x: a_line.x1 - 25, y: a_line.y1 + 5 + height, size: 11)
 		details_info << details
@@ -130,6 +122,8 @@ EOF
 	end
 
 	hovered_on_triangle, details_hover = nil, false
+
+	on :key_down do |k| exit 0 if %w(escape p q space).include?(k.key) end
 
 	on :mouse_move do |e|
 		if very_low_text.contains?(e.x, e.y) then very_low_text.color = [0,0,0,1]
@@ -146,6 +140,8 @@ EOF
 
 		if excellent_text.contains?(e.x, e.y) then excellent_text.color = [0,0,0,1]
 			elsif excellent_text.get_colour == [0,0,0,1] then excellent_text.color = $generate_colour.call end
+
+		game_details_texts.each do |val| val.color = val.contains?(e.x, e.y) ? '#dd00a6' : '#000000' end
 	end
 
 	update do
@@ -155,10 +151,8 @@ EOF
 		triangles[3].color = good_text.get_colour
 		triangles[4].color = excellent_text.get_colour
 
-		details_info.each_with_index do |val, i|
-			val.color = triangles[i].get_colour
-		end
+		details_info.each_with_index { |val, i| val.color = triangles[i].get_colour }
 	end
-	show
+	Window.show
 end
-main()
+main
