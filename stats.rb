@@ -1,7 +1,8 @@
 #!/usr/bin/ruby
-require 'ruby2d'
 # Written by Sourav Goswami <souravgoswami@protonmail.com>. Thanks to Ruby2D community!
 # GNU General Public License v3.0
+
+require 'ruby2d'
 
 module Ruby2D def get_colour() [self.r, self.g, self.b, self.opacity] end end
 
