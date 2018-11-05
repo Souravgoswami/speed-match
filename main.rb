@@ -1,4 +1,7 @@
 #!/usr/bin/ruby -W0
+# Written by Sourav Goswami <souravgoswami@protonmail.com>. Thanks to Ruby2D community!
+# GNU General Public License v3.0
+
 require 'ruby2d'
 STDOUT.sync = true
 
