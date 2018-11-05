@@ -40,15 +40,6 @@ def main()
 
 	$t = ->(format='%s') { Time.new.strftime(format) }
 
-	three = Text.new '3', font: 'fonts/Aller_Lt.ttf', size: 30, z: 5
-	three.x, three.y, three.opacity = $width/2 - three.width/2, $height/2 - three.height/2, 0
-
-	two = Text.new '2', font: 'fonts/Aller_Lt.ttf', size: 30, z: 5
-	two.x, two.y, two.opacity = $width/2 - two.width/2, $height/2 - two.height/2, 0
-
-	one = Text.new '1', font: 'fonts/Aller_Lt.ttf', size: 30, z: 5
-	one.x, one.y, one.opacity = $width/2 - one.width/2, $height/2 - one.height/2, 0
-
 	set title: 'Speed Match', width: $width, height: $height, resizable: true, background: $generate_colour.call, fps_cap: $fps
 	bg = Image.new "images/bg.jpg", width: $width, height: $height, z: -10
 
@@ -125,7 +116,8 @@ def main()
 	restart_touched = false
 	restart_button = Image.new 'images/restart.png', x: about_button.x, y: play_button2.y, z: resume_button.z
 
-	score = 0
+	i, countdown, streak, score = 0.0, 0, 0, 0
+	prev_item, next_item = '', ''
 
 	score_touched = false
 	score_text = Text.new "\tSCORE\t\t#{score}\t", font: 'fonts/Aller_Lt.ttf', size: 15, color: 'blue'
@@ -136,8 +128,6 @@ def main()
 	time_text = Text.new "\tTIME\t\t#{45}\t", font: 'fonts/Aller_Lt.ttf', size: 15, color: 'blue'
 	time_text.x = score_text.x - time_text.width - 5
 	time_box = Rectangle.new x: time_text.x, y: time_text.y + 1, width: time_text.width, height: time_text.height, z: -1
-
-	prev_item, next_item = '', ''
 
 	on :key_held do |k|
 		button_yes_touched = true if %w(left a 1 j).include?(k.key)
@@ -173,7 +163,6 @@ def main()
 		restart_touched = restart_button.contains?(e.x, e.y) ? true : false
 	end
 
-	i = 0
 	on :mouse_down do |e|
 		button_yes_pressed = button_yes.contains?(e.x, e.y) ? true : false
 		button_no_pressed = button_no.contains?(e.x, e.y) ? true : false
@@ -192,9 +181,9 @@ def main()
 		end
 
 		exit 0 if power_button.contains?(e.x, e.y) and power_button.opacity > 0.1
-		Thread.new { system('ruby', 'stats.rb', "#{score}") } if about_button.contains?(e.x, e.y) and about_button.opacity > 0.1
+		Thread.new { system('ruby', 'stats.rb') } if about_button.contains?(e.x, e.y) and about_button.opacity > 0.1
 
-		score, steak, i, pause_var, prev_item = 0, 0, 0.0, 1, '' if restart_button.contains?(e.x, e.y)
+		score, streak, i, pause_var, prev_item = 0, 0, 0.0, 1, '' if restart_button.contains?(e.x, e.y)
 	end
 
 	zero = Text.new '0', font: 'fonts/Aller_Lt.ttf', size: 35, z: 12
@@ -212,11 +201,9 @@ def main()
 	beep = Sound.new 'sounds/beep.wav'
 	start_game_sound = Sound.new 'sounds/start_game.ogg'
 
-	countdown = 0
 	pressed = false
 	counter = $t.call('%s').to_i
 
-	steak = 0
 	update do
 		unless pause_var % 2 == 0
 			beep.play if countdown % $fps == 0 and !started
@@ -263,13 +250,14 @@ def main()
 			resume_button.b -= 0.08 if resume_button.b > 0
 			else resume_button.b += 0.08 if resume_button.b < 1 end
 
+
 		timer = 45.-((i)./($fps)).to_f.round(1)
 		if timer <= 0
 			File.open('data/data', 'a+') { |file| file.puts(score) }
 			pause_var = 0
 			started = false
 			instruction_text.text, instruction_text.opacity, instruction_text.z = "Game Over. Final Score\t #{score}. Click to show stat", 1, 12
-			score, steak, prev_item = 0, 0, ''
+			score, streak, prev_item = 0, 0, ''
 			i = 0.0
 		end
 
@@ -301,14 +289,17 @@ def main()
 
 			score_text.text = "\tSCORE\t\t#{score}\t"
 			time_text.text = "\tTIME\t\t#{timer}\t"
+
 			instruction_text.text, instruction_text.z = 'Does this card match the previous card?', 0
 
 			score_text.x = $width - score_text.width - 5
-			score_box.x, score_box.y = score_text.x, score_text.y + 1
-			score_box.width, score_box.height = score_text.width, score_text.height
 			time_text.x = score_text.x - time_text.width - 5
-			time_box.x, time_box.y = time_text.x, time_text.y + 1
+
+			score_box.width, score_box.height = score_text.width, score_text.height
+			score_box.x, score_box.y = score_text.x, score_text.y + 1
+
 			time_box.width, time_box.height = time_text.width, time_text.height
+			time_box.x, time_box.y = time_text.x, time_text.y + 1
 
 			$control.call(correct, 'reduce', 0.08, 0)
 			$control.call(wrong, 'reduce', 0.08, 0)
@@ -353,15 +344,15 @@ def main()
 				button_yes_pressed, button_no_pressed = false, false
 				yes_text.color = 'red'
 				if prev_item == current_item
-					steak += 1
+					streak += 1
 					correct.opacity = 1
-					score += 1 * steak
+					score += 1 * streak
 					sound_correct.play
 				else
-					steak = 0
+					streak = 0
 					wrong.opacity = 1
 					sound_wrong.play
-					score -= 1 * steak
+					score -= 1 * streak
 				end
 			end
 
@@ -370,15 +361,15 @@ def main()
 				button_yes_pressed, button_no_pressed = false, false
 				no_text.color = 'red'
 				unless prev_item == current_item
-					steak += 1
+					streak += 1
 					correct.opacity = 1
-					score += 1 * steak
+					score += 1 * streak
 					sound_correct.play
 				else
-					steak = 0
+					streak = 0
 					wrong.opacity = 1
 					sound_wrong.play
-					score -= 1 * steak
+					score -= 1 * streak
 				end
 			end
 
@@ -390,7 +381,7 @@ def main()
 						pressed = false
 						prev_item = val.path
 						val.remove
-						items.pop
+						items.shift
 					end
 				end
 			end
