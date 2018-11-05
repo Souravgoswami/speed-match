@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 require 'ruby2d'
-STDOUT.sync = true
+# Written by Sourav Goswami <souravgoswami@protonmail.com>. Thanks to Ruby2D community!
+# GNU General Public License v3.0
 
 module Ruby2D def get_colour() [self.r, self.g, self.b, self.opacity] end end
 
