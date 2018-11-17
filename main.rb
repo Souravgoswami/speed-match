@@ -9,14 +9,9 @@ STDOUT.sync = true
 
 module Ruby2D
 	def change_colour=(colour)
-		opacity_ = self.opacity
-		self.color = colour
+		opacity_, self.color = self.opacity, colour
 		self.opacity = opacity_
 	end
-
-	def r=(r_val) self.color = [r_val, self.g, self.b, self.opacity] end
-	def g=(g_val) self.color = [self.r, g_val, self.b, self.opacity] end
-	def b=(b_val) self.color = [self.r, self.g, b_val, self.opacity] end
 end
 
 def main()
