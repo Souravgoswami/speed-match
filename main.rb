@@ -189,17 +189,7 @@ def main()
 		score, streak, i, pause_var, prev_item = 0, 0, 0.0, 1, '' if restart_button.contains?(e.x, e.y)
 	end
 
-	zero = Text.new '0', font: 'fonts/Aller_Lt.ttf', size: 35, z: 12
-	zero.x, zero.opacity = $width/2 - zero.width/2, 0
-
-	one = Text.new '1', font: 'fonts/Aller_Lt.ttf', size: 35, z: 12
-	one.x, one.opacity = $width/2 - one.width/2, 0
-
-	two = Text.new '2', font: 'fonts/Aller_Lt.ttf', size: 35, z: 12
-	two.x, two.opacity = $width/2 - one.width/2, 0
-
-	three = Text.new '3', font: 'fonts/Aller_Lt.ttf', size: 35, z: 12
-	three.x, three.opacity = $width/2 - one.width/2, 0
+	counter_label = Text.new '', font: 'fonts/Aller_Lt.ttf', size: 35, z: 12
 
 	beep = Sound.new 'sounds/beep.wav'
 	start_game_sound = Sound.new 'sounds/start_game.ogg'
@@ -212,19 +202,16 @@ def main()
 			beep.play if countdown % $fps == 0 and !started
 			countdown += 1
 			case countdown/$fps
-				when 0
-					zero.opacity, one.opacity, two.opacity, three.opacity = 0, 0, 0, 1
-				when 1
-					zero.opacity, one.opacity, two.opacity, three.opacity = 0, 0, 1, 0
-				when 2
-					zero.opacity, one.opacity, two.opacity, three.opacity = 0, 1, 0, 0
-				when 3
-					zero.opacity, one.opacity, two.opacity, three.opacity = 1, 0, 0, 0
+				when 0 then counter_label.text = '3'
+				when 1 then counter_label.text = '2'
+				when 2 then counter_label.text = '1'
 				else
 					start_game_sound.play if !started
 					started = true
-			zero.opacity, one.opacity, two.opacity, three.opacity = 0, 0, 0, 0
+					counter_label.text = 'Go!'
+					counter_label.opacity = 0
 			end
+			counter_label.x, counter_label.y = $width/2 - counter_label.width/2, pausebox.y + pausebox.height
 		else
 			started, countdown = false, 0
 		end
