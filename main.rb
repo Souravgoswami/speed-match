@@ -3,6 +3,8 @@
 # GNU General Public License v3.0
 
 require 'ruby2d'
+require 'securerandom'
+
 STDOUT.sync = true
 
 module Ruby2D
@@ -18,13 +20,7 @@ module Ruby2D
 end
 
 def main()
-	$width, $height, $fps = 640, 480, 50
-
-	$generate_colour = -> {
-		colour = ''
-		6.times do colour += [('a'..'f').to_a.sample, ('0'..'9').to_a.sample].sample end
-		"##{colour}"
-	}
+	$width, $height, $fps = 640, 480, 45
 
 	available_images = %w(3d_ball 5petals_filled balls bouquet bulb circle circles1 circles2 diamond_hex diamond dice
 							hearts hexagon petals polygon ring ring2 rubik1 rubik2 star triangle triangle2)
@@ -43,7 +39,7 @@ def main()
 
 	$t = ->(format='%s') { Time.new.strftime(format) }
 
-	set title: 'Speed Match', width: $width, height: $height, resizable: true, background: $generate_colour.call, fps_cap: $fps
+	set title: 'Speed Match', width: $width, height: $height, resizable: true, background: "##{SecureRandom.hex(3)}", fps_cap: $fps
 	bg = Image.new "images/bg.jpg", width: $width, height: $height, z: -10
 
 	started = false
@@ -66,7 +62,7 @@ def main()
 
 	100.times do
 		size = rand(6..10)
-		square_ = Image.new 'shapes/1pixel_square.jpg', width: size, height: size, color: $generate_colour.call, z: -1
+		square_ = Image.new 'shapes/1pixel_square.jpg', width: size, height: size, color: "##{SecureRandom.hex(3)}", z: -1
 		square_.x, square_.y, square_.opacity = rand(0..$width - square_.width), rand(0..$height - square_.height), rand(0.2..0.5)
 		squares << square_
 		squares_speed << rand(1.0..4.0)
@@ -90,7 +86,7 @@ def main()
 	wrong.x, wrong.y, wrong.opacity = $width/2 - wrong.width/2, button_yes.y - wrong.height - 5, 0
 
 	pause = Image.new 'images/pause.png', width: $width/20, height: $width/25, z: 12
-	pausetext = Text.new "Play/Pause\t", x: pause.x + pause.width, y: pause.y, color: 'blue', z: 12
+	pausetext = Text.new "Play/Pause\t", font: 'fonts/Aller_Lt.ttf',  x: pause.x + pause.width, y: pause.y, color: 'blue', z: 12
 	pausebox_touched, pause_clicked, pausetext.opacity = false, false, 0
 	pausebox = Rectangle.new width: pause.width - 3, height: pause.height - 2, x: 1, y: 1, z: 11
 
@@ -155,9 +151,11 @@ def main()
 		pausebox_touched = pausebox.contains?(e.x, e.y) ? true : false
 		button_yes_touched = button_yes.contains?(e.x, e.y) ? true : false
 		button_no_touched = button_no.contains?(e.x, e.y) ? true : false
+
 		items.each do |val|
 			items_touched = val.contains?(e.x, e.y) ? true : false
 		end
+
 		resume_button_touched = resume_button.contains?(e.x, e.y) ? true : false
 		resume_text_touched = resume_text.contains?(e.x, e.y) ? true : false
 		about_button_touched = about_button.contains?(e.x, e.y) ? true : false
@@ -200,6 +198,7 @@ def main()
 	update do
 		unless pause_var % 2 == 0
 			beep.play if countdown % $fps == 0 and !started
+			counter_label.opacity = 1 if !started
 			countdown += 1
 			case countdown/$fps
 				when 0 then counter_label.text = '3'
@@ -209,7 +208,6 @@ def main()
 					start_game_sound.play if !started
 					started = true
 					counter_label.text = 'Go!'
-					counter_label.opacity = 0
 			end
 			counter_label.x, counter_label.y = $width/2 - counter_label.width/2, pausebox.y + pausebox.height
 		else
@@ -240,7 +238,6 @@ def main()
 			resume_button.b -= 0.08 if resume_button.b > 0
 			else resume_button.b += 0.08 if resume_button.b < 1 end
 
-
 		timer = 45.-((i)./($fps)).to_f.round(1)
 		if timer <= 0
 			File.open('data/data', 'a+') { |file| file.puts(score) }
@@ -262,7 +259,7 @@ def main()
 				square.width = square.height = rand(6..10)
 				squares_speed.delete_at(i)
 				squares_speed.insert(i, rand(1.0..4.0))
-				square.x, square.y, square.change_colour = rand(0..$width - square.width), $height + square.height, $generate_colour.call
+				square.x, square.y, square.change_colour = rand(0..$width - square.width), $height + square.height, "##{SecureRandom.hex(3)}"
 			end
 		end
 
@@ -274,6 +271,7 @@ def main()
 			$control.call(about_button, 'reduce', 0.1, 0)
 			$control.call(play_button2, 'reduce', 0.1, 0)
 			$control.call(restart_button, 'reduce', 0.1, 0)
+			$control.call(counter_label, 'reduce', 0.05, 0)
 
 			i += 1.0
 
@@ -367,6 +365,7 @@ def main()
 				items.each do |val|
 					val.x -= $width/10.0
 					val.opacity -= 0.2
+					val.rotate -= 10
 					if val.x <= -val.width
 						pressed = false
 						prev_item = val.path
