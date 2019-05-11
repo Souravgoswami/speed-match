@@ -49,10 +49,10 @@ def main()
 	yes_text = Text.new 'YES', font: FONT, size: button_yes.height / 1.5, color: 'teal'
 	yes_text.x, yes_text.y = button_yes.x + button_yes.width/2 - yes_text.width/2, button_yes.y + button_yes.height/2 - yes_text.height/2
 
-	button_no = Rectangle.new width: $width/2 - 5, height: $height/5
+	button_no = Rectangle.new width: $width/2 - 5, height: $height / 5
 	button_no.x, button_no.y = button_yes.x + button_yes.width + 8, $height - button_no.height - 1
 
-	no_text = Text.new 'NO', font: FONT, size: button_no.height/1.5, color: 'teal'
+	no_text = Text.new 'NO', font: FONT, size: button_no.height / 1.5, color: 'teal'
 	no_text.x, no_text.y = button_no.x + button_no.width/2 - no_text.width/2, button_no.y + button_no.height/2 - no_text.height/2
 
 	squares = Array.new(100) { Image.new(File.join(PATH, 'shapes', '1pixel_square.jpg'), color: "##{SecureRandom.hex(3)}", z: -1, width: (sz= rand(6..10)), height: sz, x: rand($width), y: rand($height)) }
@@ -67,13 +67,13 @@ def main()
 	sound_correct = Sound.new(File.join(PATH, 'sounds', '131662__bertrof__game-sound-correct-v2.wav'))
 	sound_wrong = Sound.new(File.join(PATH, 'sounds', '131657__bertrof__game-sound-wrong.wav'))
 
-	correct = Image.new(File.join(PATH, 'images', 'correct.png'), width: $width/10, height: $width / 10)
+	correct = Image.new(File.join(PATH, 'images', 'correct.png'), width: $width / 10, height: $width / 10)
 	correct.x, correct.y, correct.opacity = $width / 2 - correct.width / 2, button_yes.y - correct.height - 5, 0
 
-	wrong = Image.new File.join(PATH, 'images', 'wrong.png'), width: $width/10, height: $width/10
+	wrong = Image.new File.join(PATH, 'images', 'wrong.png'), width: $width / 10, height: $width / 10
 	wrong.x, wrong.y, wrong.opacity = $width/2 - wrong.width/2, button_yes.y - wrong.height - 5, 0
 
-	pause = Image.new File.join(PATH, 'images', 'pause.png'), width: $width/20, height: $width/25, z: 12
+	pause = Image.new File.join(PATH, 'images', 'pause.png'), width: $width / 20, height: $width / 25, z: 12
 	pausetext = Text.new "Play/Pause\t", font: FONT,  x: pause.x + pause.width, y: pause.y, color: 'blue', z: 12
 	pausebox_touched, pause_clicked, pausetext.opacity = false, false, 0
 	pausebox = Rectangle.new width: pause.width - 3, height: pause.height - 2, x: 1, y: 1, z: 11
@@ -211,7 +211,7 @@ def main()
 			resume_button.b += 0.08 if resume_button.b < 1
 		end
 
-		timer = 1.-((i)./($fps)).to_f.round(1)
+		timer = 45.-((i)./($fps)).to_f.round(0)
 		if timer <= 0
 			File.open(File.join(PATH, 'data', 'data'), 'a+') { |file| file.puts(score.to_s.unpack('h*')[0]) }
 			started = false
