@@ -3,7 +3,7 @@ Speed match is a brain training game (not based on real brain test).
 ![screenshot](https://github.com/Souravgoswami/speed-match/blob/master/Screenshots/a.png)
 
 ## Running the Source Code ⚙️
-  + Install ![Ruby](https://www.ruby-lang.org/en/downloads/) and ![Ruby2D](http://www.ruby2d.com/learn/get-started/)
+  + Install [Ruby](https://www.ruby-lang.org/en/downloads/) and [Ruby2D](http://www.ruby2d.com/learn/get-started/)
   + Download the ![zip file here](https://github.com/Souravgoswami/speed-match/archive/master.zip).
   + Unzip the zip file.
   + Run `main.rb` with Ruby Interpreter.
