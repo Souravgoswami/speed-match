@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # Written by Sourav Goswami <souravgoswami@protonmail.com>. Thanks to Ruby2D community!
 # GNU General Public License v3.0
-%w(ruby2d openssl).each { |g| require(g) }
+require('ruby2d')
 
 @path = File.dirname(__FILE__)
 Font = File.join(@path, 'fonts', 'Aller_Lt.ttf')
