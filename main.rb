@@ -1,16 +1,24 @@
-#!/usr/bin/ruby -W0
+#!/usr/bin/env ruby
 # Written by Sourav Goswami <souravgoswami@protonmail.com>. Thanks to Ruby2D community!
 # GNU General Public License v3.0
 
-require 'ruby2d'
-require 'securerandom'
+%w(ruby2d securerandom open3).each { |g| require(g) }
 
 STDOUT.sync = true
+PATH = File.dirname(__FILE__)
+FONT = File.join(PATH, 'fonts' ,'Aller_Lt.ttf')
 
 module Ruby2D
-	def change_colour=(colour)
-		opacity_, self.color = self.opacity, colour
-		self.opacity = opacity_
+	def change_colour=(colour) self.opacity, self.color = opacity, colour end
+
+	def opacify(step = 0.05, threshold = 0.5)
+		self.opacity -= step if opacity > threshold
+		itself
+	end
+
+	def illuminate(step = 0.05, threshold = 1)
+		self.opacity += step if opacity < threshold
+		itself
 	end
 end
 
@@ -21,67 +29,49 @@ def main()
 							hearts hexagon petals polygon ring ring2 rubik1 rubik2 star triangle triangle2)
 	selected_images = available_images.sample(rand(1..2))
 
-	$generate_image = ->(image_set) {
-		image = Image.new("shapes/#{image_set.sample}.png")
-		image.x, image.y, image.opacity = $width, $height/2 -image.height/1.5, 0.5
-		image
-	}
-
-	$control = ->(object, type='reduce', val=0.05, threshold=0.65, max=1) {
-		object.opacity -= val if object.opacity > threshold and type == 'reduce'
-		object.opacity += val if object.opacity < max and type != 'reduce'
-	}
-
+	items = []
 	$t = ->(format='%s') { Time.new.strftime(format) }
+	$generate_image = ->(image_set) {
+		image = Image.new(File.join(PATH, 'shapes', "#{image_set.sample}.png"))
+		image.x, image.y, image.opacity = $width, $height / 2 - image.height / 1.5, 0.5
+		items.push(image)
+	}
 
 	set title: 'Speed Match', width: $width, height: $height, resizable: true, background: "##{SecureRandom.hex(3)}", fps_cap: $fps
-	bg = Image.new "images/bg.jpg", width: $width, height: $height, z: -10
+	Image.new File.join(PATH, 'images', 'bg.jpg'), width: $width, height: $height, z: -10
 
-	started = false
-
-	button_yes_touched, button_yes_pressed = false, false
 	button_yes = Rectangle.new width: $width/2 - 5, height: $height/5, x: 1
 	button_yes.y = $height - button_yes.height - 1
 
-	yes_text = Text.new 'YES', font: 'fonts/Aller_Lt.ttf', size: button_yes.height/1.5, color: 'teal'
+	yes_text = Text.new 'YES', font: FONT, size: button_yes.height / 1.5, color: 'teal'
 	yes_text.x, yes_text.y = button_yes.x + button_yes.width/2 - yes_text.width/2, button_yes.y + button_yes.height/2 - yes_text.height/2
 
-	button_no_touched, button_no_pressed = false, false
 	button_no = Rectangle.new width: $width/2 - 5, height: $height/5
 	button_no.x, button_no.y = button_yes.x + button_yes.width + 8, $height - button_no.height - 1
 
-	no_text = Text.new 'NO', font: 'fonts/Aller_Lt.ttf', size: button_no.height/1.5, color: 'teal'
+	no_text = Text.new 'NO', font: FONT, size: button_no.height/1.5, color: 'teal'
 	no_text.x, no_text.y = button_no.x + button_no.width/2 - no_text.width/2, button_no.y + button_no.height/2 - no_text.height/2
 
-	squares, squares_speed = [], []
+	squares = Array.new(100) { Image.new(File.join(PATH, 'shapes', '1pixel_square.jpg'), color: "##{SecureRandom.hex(3)}", z: -1, width: (sz= rand(6..10)), height: sz, x: rand($width), y: rand($height)) }
+	squares_size = squares.size
 
-	100.times do
-		size = rand(6..10)
-		square_ = Image.new 'shapes/1pixel_square.jpg', width: size, height: size, color: "##{SecureRandom.hex(3)}", z: -1
-		square_.x, square_.y, square_.opacity = rand(0..$width - square_.width), rand(0..$height - square_.height), rand(0.2..0.5)
-		squares << square_
-		squares_speed << rand(1.0..4.0)
-	end
-
-	instruction_text_touched = false
-	instruction_text = Text.new 'Does this card match the previous card?', font: 'fonts/Aller_Lt.ttf', size: 22
+	instruction_text = Text.new 'Does this card match the previous card?', font: FONT, size: 22
 	instruction_text.x, instruction_text.y = $width/2 - instruction_text.width/2, 50
 
-	items = []
-	items_touched = false
-	items << $generate_image.call(selected_images) if items.length < 1
+	button_yes_touched = button_yes_pressed = button_no_touched = button_no_pressed = resume_text_touched = started = false
+	instruction_text_touched = resume_button_touched = about_button_touched = power_touched = play_button2_touched = restart_touched = score_touched = time_touched = items_touched = false
 
-	sound_correct = Sound.new 'sounds/131662__bertrof__game-sound-correct-v2.wav'
-	sound_wrong = Sound.new 'sounds/131657__bertrof__game-sound-wrong.wav'
+	sound_correct = Sound.new(File.join(PATH, 'sounds', '131662__bertrof__game-sound-correct-v2.wav'))
+	sound_wrong = Sound.new(File.join(PATH, 'sounds', '131657__bertrof__game-sound-wrong.wav'))
 
-	correct = Image.new 'images/correct.png', width: $width/10, height: $width/10
-	correct.x, correct.y, correct.opacity = $width/2 - correct.width/2, button_yes.y - correct.height - 5, 0
+	correct = Image.new(File.join(PATH, 'images', 'correct.png'), width: $width/10, height: $width / 10)
+	correct.x, correct.y, correct.opacity = $width / 2 - correct.width / 2, button_yes.y - correct.height - 5, 0
 
-	wrong = Image.new 'images/wrong.png', width: $width/10, height: $width/10
+	wrong = Image.new File.join(PATH, 'images', 'wrong.png'), width: $width/10, height: $width/10
 	wrong.x, wrong.y, wrong.opacity = $width/2 - wrong.width/2, button_yes.y - wrong.height - 5, 0
 
-	pause = Image.new 'images/pause.png', width: $width/20, height: $width/25, z: 12
-	pausetext = Text.new "Play/Pause\t", font: 'fonts/Aller_Lt.ttf',  x: pause.x + pause.width, y: pause.y, color: 'blue', z: 12
+	pause = Image.new File.join(PATH, 'images', 'pause.png'), width: $width/20, height: $width/25, z: 12
+	pausetext = Text.new "Play/Pause\t", font: FONT,  x: pause.x + pause.width, y: pause.y, color: 'blue', z: 12
 	pausebox_touched, pause_clicked, pausetext.opacity = false, false, 0
 	pausebox = Rectangle.new width: pause.width - 3, height: pause.height - 2, x: 1, y: 1, z: 11
 
@@ -89,39 +79,31 @@ def main()
 	pause_blur = Rectangle.new x: 0, y: 0, width: $width, height: $height, color: 'black', z: 10
 	pause_blur.opacity = 0.7
 
-	resume_text_touched = false
-	resume_text = Text.new 'Play!', font: 'fonts/Aller_Lt.ttf', size: 100, z: pause_blur.z
-	resume_text.x, resume_text.y = pause_blur.x + pause_blur.width/2 - resume_text.width/2, pause_blur.y + pause_blur.height/2
+	resume_text = Text.new 'Play!', font: FONT, size: 100, z: pause_blur.z
+	resume_text.x, resume_text.y = pause_blur.x + pause_blur.width/2 - resume_text.width / 2, pause_blur.y + pause_blur.height / 2
 
-	resume_button_touched = false
-	resume_button = Image.new 'images/play_button.png', z: resume_text.z
-	resume_button.x, resume_button.y = pause_blur.x + pause_blur.width/2 - resume_button.width/2, resume_text.y - resume_button.height
+	resume_button = Image.new File.join(PATH, 'images', 'play_button.png'), z: resume_text.z
+	resume_button.x, resume_button.y = pause_blur.x + pause_blur.width / 2 - resume_button.width / 2, resume_text.y - resume_button.height
 
-	about_button_touched = false
-	about_button = Image.new 'images/bulb.png', z: resume_button.z
+	about_button = Image.new File.join(PATH, 'images', 'bulb.png'), z: resume_button.z
 	about_button.x, about_button.y = $width - about_button.width - 5, button_no.y - about_button.height - 5
 
-	power_touched = false
-	power_button = Image.new 'images/power.png', z: resume_button.z, x: 5, y: about_button.y
-
-	play_button2_touched = false
-	play_button2 = Image.new 'images/play_button_64x64.png', z: resume_button.z, x: power_button.x, y: pausebox.y + pausebox.height + 5
-
-	restart_touched = false
-	restart_button = Image.new 'images/restart.png', x: about_button.x, y: play_button2.y, z: resume_button.z
+	power_button = Image.new File.join(PATH, 'images', 'power.png'), z: resume_button.z, x: 5, y: about_button.y
+	play_button2 = Image.new File.join(PATH, 'images', 'play_button_64x64.png'), z: resume_button.z, x: power_button.x, y: pausebox.y + pausebox.height + 5
+	restart_button = Image.new File.join(PATH, 'images', 'restart.png'), x: about_button.x, y: play_button2.y, z: resume_button.z
 
 	i, countdown, streak, score = 0.0, 0, 0, 0
-	prev_item, next_item = '', ''
+	prev_item = ''
 
-	score_touched = false
-	score_text = Text.new "\tSCORE\t\t#{score}\t", font: 'fonts/Aller_Lt.ttf', size: 15, color: 'blue'
+	score_text = Text.new "\tSCORE\t\t#{score}\t", font: FONT, size: 15, color: 'blue'
 	score_text.x = $width - score_text.width - 5
 	score_box = Rectangle.new x: score_text.x, y: score_text.y + 1, width: score_text.width, height: score_text.height, z: -1
 
-	time_touched = false
-	time_text = Text.new "\tTIME\t\t#{45}\t", font: 'fonts/Aller_Lt.ttf', size: 15, color: 'blue'
+	time_text = Text.new "\tTIME\t\t#{45}\t", font: FONT, size: 15, color: 'blue'
 	time_text.x = score_text.x - time_text.width - 5
 	time_box = Rectangle.new x: time_text.x, y: time_text.y + 1, width: time_text.width, height: time_text.height, z: -1
+
+	hideable_objects = power_button, about_button, play_button2, restart_button
 
 	on :key_held do |k|
 		button_yes_touched = true if %w(left a 1 j).include?(k.key)
@@ -135,38 +117,25 @@ def main()
 	end
 
 	on :key_up do |k|
-		button_yes_touched = false if k.key == 'left'
-		button_no_touched = false if k.key == 'right'
+		button_yes_touched = false if %w(left a 1 j).include?(k.key)
+		button_no_touched = false if %w(right d 3 ;).include?(k.key)
 	end
 
 	on :mouse_move do |e|
-		time_touched = time_box.contains?(e.x, e.y) ? true : false
-		score_touched = score_box.contains?(e.x, e.y) ? true : false
-		instruction_text_touched = instruction_text.contains?(e.x, e.y) ? true : false
-		pausebox_touched = pausebox.contains?(e.x, e.y) ? true : false
-		button_yes_touched = button_yes.contains?(e.x, e.y) ? true : false
-		button_no_touched = button_no.contains?(e.x, e.y) ? true : false
+		%w(time_touched score_touched instruction_text_touched, pausebox_touched button_yes_touched button_no_touched resume_button_touched resume_text_touched
+			about_button_touched power_touched play_button2_touched restart_touched).zip(%w(time_box score_box instruction_text pausebox button_yes button_no
+				resume_button resume_text about_button power_button play_button2 restart_button)).each { |b| eval("#{b[0]} = #{b[1]}.contains?(e.x, e.y)") }
 
-		items.each do |val|
-			items_touched = val.contains?(e.x, e.y) ? true : false
-		end
-
-		resume_button_touched = resume_button.contains?(e.x, e.y) ? true : false
-		resume_text_touched = resume_text.contains?(e.x, e.y) ? true : false
-		about_button_touched = about_button.contains?(e.x, e.y) ? true : false
-		power_touched = power_button.contains?(e.x, e.y) ? true : false
-		play_button2_touched = play_button2.contains?(e.x, e.y) ? true : false
-		restart_touched = restart_button.contains?(e.x, e.y) ? true : false
+		items.each { |val| items_touched = val.contains?(e.x, e.y) }
 	end
 
 	on :mouse_down do |e|
-		button_yes_pressed = button_yes.contains?(e.x, e.y) ? true : false
-		button_no_pressed = button_no.contains?(e.x, e.y) ? true : false
-		if pausebox.contains?(e.x, e.y) then pausebox.color, pause_clicked = 'yellow', true end
+		button_yes_pressed, button_no_pressed = button_yes.contains?(e.x, e.y), button_no.contains?(e.x, e.y)
+		pausebox.color, pause_clicked = '#FFBC00', true if pausebox.contains?(e.x, e.y)
 	end
 
 	on :mouse_up do |e|
-		pausebox.color, pause_clicked = 'white', false
+		pausebox.color, pause_clicked = '#FFFFFF', false
 		if (pausebox.contains?(e.x, e.y) and pausebox.opacity > 0.1) or \
 						(resume_text.contains?(e.x, e.y) and resume_text.opacity > 0.1) or \
 						(resume_button.contains?(e.x, e.y) and resume_button.opacity > 0.1) or \
@@ -176,16 +145,15 @@ def main()
 			countdown = 0
 		end
 
-		exit 0 if power_button.contains?(e.x, e.y) and power_button.opacity > 0.1
-		Thread.new { system('ruby', 'stats.rb') } if about_button.contains?(e.x, e.y) and about_button.opacity > 0.1
-
+		close if power_button.contains?(e.x, e.y) and power_button.opacity > 0.1
+		Open3.pipeline_start("#{File.join(RbConfig::CONFIG['bindir'], 'ruby')} #{File.join(PATH, 'stats.rb')}") if about_button.contains?(e.x, e.y)
 		score, streak, i, pause_var, prev_item = 0, 0, 0.0, 1, '' if restart_button.contains?(e.x, e.y)
 	end
 
-	counter_label = Text.new '', font: 'fonts/Aller_Lt.ttf', size: 35, z: 12
+	counter_label = Text.new '', font: FONT, size: 35, z: 12
 
-	beep = Sound.new 'sounds/beep.wav'
-	start_game_sound = Sound.new 'sounds/start_game.ogg'
+	beep = Sound.new File.join(PATH, 'sounds', 'beep.wav')
+	start_game_sound = Sound.new File.join(PATH, 'sounds', 'start_game.ogg')
 
 	pressed = false
 	counter = $t.call('%s').to_i
@@ -195,85 +163,85 @@ def main()
 			beep.play if countdown % $fps == 0 and !started
 			counter_label.opacity = 1 if !started
 			countdown += 1
-			case countdown/$fps
-				when 0 then counter_label.text = '3'
-				when 1 then counter_label.text = '2'
-				when 2 then counter_label.text = '1'
+
+			counter_label.text = case countdown/$fps
+				when 0 then '3'
+				when 1 then '2'
+				when 2 then '1'
 				else
 					start_game_sound.play if !started
 					started = true
-					counter_label.text = 'Go!'
+					'Go!'
 			end
-			counter_label.x, counter_label.y = $width/2 - counter_label.width/2, pausebox.y + pausebox.height
+			counter_label.x, counter_label.y = $width / 2 - counter_label.width / 2, pausebox.y + pausebox.height
 		else
 			started, countdown = false, 0
 		end
 
 		if pausebox_touched
-			$control.call(pausetext, '', 0.05)
+			pausetext.illuminate
 			pausebox.width += 10 if pausebox.width < pause.width + pausetext.width + 5
 		else
-			$control.call(pausetext, 'reduce', 0.1, 0)
+			pausetext.opacify(0.05, 0)
 			pausebox.width -= 10 if pausebox.width > pause.width - 3
 		end
 
 		if about_button_touched then about_button.g -= 0.08  if about_button.g > 0.5
-			else about_button.g += 0.08 if about_button.g < 1 end
+		else about_button.g += 0.08 if about_button.g < 1
+		end
 
 		if power_touched then power_button.g -= 0.08 if power_button.g > 0.5
-			else power_button.g += 0.08 if power_button.g < 1 end
+		else power_button.g += 0.08 if power_button.g < 1
+		end
 
 		if restart_touched then restart_button.g -= 0.08 if restart_button.g > 0.5
-			else restart_button.g += 0.08 if restart_button.g < 1 end
+		else restart_button.g += 0.08 if restart_button.g < 1
+		end
 
 		if play_button2_touched then play_button2.g -= 0.08 if play_button2.g > 0.5
-			else play_button2.g += 0.08 if play_button2.g < 1 end
+		else play_button2.g += 0.08 if play_button2.g < 1
+		end
 
 		if resume_text_touched or pausebox_touched or resume_button_touched or play_button2_touched
 			resume_button.b -= 0.08 if resume_button.b > 0
-			else resume_button.b += 0.08 if resume_button.b < 1 end
+		else
+			resume_button.b += 0.08 if resume_button.b < 1
+		end
 
 		timer = 45.-((i)./($fps)).to_f.round(1)
 		if timer <= 0
-			File.open('data/data', 'a+') { |file| file.puts(score) }
-			pause_var = 0
+			File.open(File.join(PATH, 'data', 'data'), 'a+') { |file| file.puts(score) }
 			started = false
-			instruction_text.text, instruction_text.opacity, instruction_text.z = "Game Over. Final Score\t #{score}. Click to show stat", 1, 12
-			score, streak, prev_item = 0, 0, ''
+			instruction_text.text, instruction_text.opacity, instruction_text.z = "Game Over. Final Score\t #{score}. Click to show stat", 1, 12 unless instruction_text.z == 1
+			score, streak, pause_var, prev_item = 0, 0, 0, ''
 			i = 0.0
 		end
 
-		instruction_text_touched ? $control.call(instruction_text) : $control.call(instruction_text, '') if pause_var == 0
-		instruction_text.x = $width/2 - instruction_text.width/2
+		instruction_text_touched ? instruction_text.opacify : instruction_text.illuminate if pause_var == 0
+		instruction_text.x = $width / 2 - instruction_text.width / 2
 
 		squares.each_with_index do |square, i|
-			square.y -= squares_speed[i]
-			square.rotate += squares_speed[i]
+			square.y -= i / (squares_size / 2.0) + 2
+			square.rotate += square.width / 2.0
 
 			if square.y <= -square.height
 				square.width = square.height = rand(6..10)
-				squares_speed.delete_at(i)
-				squares_speed.insert(i, rand(1.0..4.0))
 				square.x, square.y, square.change_colour = rand(0..$width - square.width), $height + square.height, "##{SecureRandom.hex(3)}"
 			end
 		end
 
 		if started
-			$control.call(pause_blur, 'reduce', 0.08, 0)
-			$control.call(resume_text, 'reduce', 0.08, 0)
-			$control.call(resume_button, 'reduce', 0.1, 0)
-			$control.call(power_button, 'reduce', 0.1, 0)
-			$control.call(about_button, 'reduce', 0.1, 0)
-			$control.call(play_button2, 'reduce', 0.1, 0)
-			$control.call(restart_button, 'reduce', 0.1, 0)
-			$control.call(counter_label, 'reduce', 0.05, 0)
-
 			i += 1.0
+
+			hideable_objects.each { |el| el.opacify(0.08, 0) }
+			pause_blur.opacify(0.08, 0)
+			resume_text.opacify(0.08, 0)
+			resume_button.opacify(0.08, 0)
+			counter_label.opacify(0.08, 0)
 
 			score_text.text = "\tSCORE\t\t#{score}\t"
 			time_text.text = "\tTIME\t\t#{timer}\t"
-
-			instruction_text.text, instruction_text.z = 'Does this card match the previous card?', 0
+			instruction_text.text, instruction_text.z = 'Does this card match the previous card?', 0 unless instruction_text.z == 0
 
 			score_text.x = $width - score_text.width - 5
 			time_text.x = score_text.x - time_text.width - 5
@@ -284,16 +252,16 @@ def main()
 			time_box.width, time_box.height = time_text.width, time_text.height
 			time_box.x, time_box.y = time_text.x, time_text.y + 1
 
-			$control.call(correct, 'reduce', 0.08, 0)
-			$control.call(wrong, 'reduce', 0.08, 0)
+			correct.opacify(0.08, 0)
+			wrong.opacify(0.08, 0)
 
-			time_touched ? $control.call(time_box) : $control.call(time_box, '')
-			score_touched ? $control.call(score_box) : $control.call(score_box, '')
-			instruction_text_touched ? $control.call(instruction_text) : $control.call(instruction_text, '')
+			time_touched ? time_box.opacify : time_box.illuminate
+			score_touched ? score_box.opacify : score_box.illuminate
+			instruction_text_touched ? instruction_text.opacify : instruction_text.illuminate
 
-			pause_clicked ? $control.call(pausebox) : $control.call(pausebox, '')
+			pause_clicked ? pausebox.opacify : pausebox.illuminate
 
-			items << $generate_image.call(selected_images) if items.length < 1
+			$generate_image.call(selected_images) if items.length < 1
 			current_item = items[0].path
 
 			if counter % $fps * 3 == 0
@@ -302,30 +270,30 @@ def main()
 			end
 
 			items.each do |val|
-				items_touched ? $control.call(val, 'reduce', 0.08) : $control.call(val, '', 0.08)
-				val.x -= $width/15 if val.x > $width/2.0 - val.width/2.0
+				items_touched ? val.opacify : val.illuminate
+				val.x -= $width / 15 if val.x > $width / 2.0 - val.width/2.0
 			end
 
 			if button_yes_touched
-				$control.call(button_yes)
+				button_yes.opacify
 	 			yes_text.b += 0.15 if yes_text.b < 1
 			else
-				$control.call(button_yes, '')
+				button_yes.illuminate
 				yes_text.color = [0.8, 0.8, 0.3, 1]
 			end
 
 			if button_no_touched
-				$control.call(button_no)
+				button_no.opacify
 	 			no_text.b += 0.15 if yes_text.b < 1
 			else
-				$control.call(button_no, '')
+				button_no.illuminate
 				no_text.color = [0.8, 0.8, 0.3, 1]
 			end
 
 			if button_yes_pressed
 				pressed = true
-				button_yes_pressed, button_no_pressed = false, false
-				yes_text.color = 'red'
+				button_yes_pressed = button_no_pressed = false
+				yes_text.color = '#FF0000'
 				if prev_item == current_item
 					streak += 1
 					correct.opacity = 1
@@ -341,18 +309,18 @@ def main()
 
 			if button_no_pressed
 				pressed = true
-				button_yes_pressed, button_no_pressed = false, false
-				no_text.color = 'red'
+				no_text.color = '#FF0000'
+				button_yes_pressed = button_no_pressed = false
 				unless prev_item == current_item
 					streak += 1
-					correct.opacity = 1
 					score += 1 * streak
+					correct.opacity = 1
 					sound_correct.play
 				else
 					streak = 0
+					score -= 1 * streak
 					wrong.opacity = 1
 					sound_wrong.play
-					score -= 1 * streak
 				end
 			end
 
@@ -360,7 +328,8 @@ def main()
 				items.each do |val|
 					val.x -= $width/10.0
 					val.opacity -= 0.2
-					val.rotate -= 10
+					val.rotate -= 15
+
 					if val.x <= -val.width
 						pressed = false
 						prev_item = val.path
@@ -369,17 +338,19 @@ def main()
 					end
 				end
 			end
-			else
-				resume_button_touched ? $control.call(resume_button) : $control.call(resume_button, '')
-				resume_text_touched ? $control.call(resume_text) : $control.call(resume_text, '')
-				$control.call(power_button, '')
-				$control.call(about_button, '')
-				$control.call(play_button2, '')
-				$control.call(restart_button, '')
-				$control.call(pause_blur, '', 0.05, 0.65, 0.7)
+		else
+			hideable_objects.each(&:illuminate)
+			resume_button_touched ? resume_button.opacify : resume_button.illuminate
+			resume_text_touched ? resume_text.opacify : resume_text.illuminate
+			pause_blur.illuminate(0.05, 0.5)
 		end
 		counter += 1
 	end
-	Window.show
 end
-main
+
+begin
+	main
+	Window.show
+rescue Exception => e
+	Kernel.warn("Uh oh, Caught an Exception:\n#{' ' * 4}#{e}\n#{'-' * (e.to_s.length + 4)}\nError Details:\n#{' ' * 4}#{e.backtrace.join("\n" + ' ' * 4)}\n")
+end
