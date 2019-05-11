@@ -4,9 +4,12 @@
 
 %w(ruby2d securerandom open3).each { |g| require(g) }
 
-STDOUT.sync = true
 PATH = File.dirname(__FILE__)
 FONT = File.join(PATH, 'fonts' ,'Aller_Lt.ttf')
+STDOUT.sync = true
+
+# Check for the score directory - which may be stripped off by GitHub for being empty
+::Dir.mkdir(::File.join(PATH, 'data')) unless ::Dir.exist?(::File.join(PATH, 'data'))
 
 module Ruby2D
 	def change_colour=(colour) self.opacity, self.color = opacity, colour end
@@ -208,9 +211,9 @@ def main()
 			resume_button.b += 0.08 if resume_button.b < 1
 		end
 
-		timer = 45.-((i)./($fps)).to_f.round(1)
+		timer = 1.-((i)./($fps)).to_f.round(1)
 		if timer <= 0
-			File.open(File.join(PATH, 'data', 'data'), 'a+') { |file| file.puts(score) }
+			File.open(File.join(PATH, 'data', 'data'), 'a+') { |file| file.puts(score.to_s.unpack('h*')[0]) }
 			started = false
 			instruction_text.text, instruction_text.opacity, instruction_text.z = "Game Over. Final Score\t #{score}. Click to show stat", 1, 12 unless instruction_text.z == 1
 			score, streak, pause_var, prev_item = 0, 0, 0, ''
@@ -351,6 +354,7 @@ end
 begin
 	main
 	Window.show
+rescue SystemExit, Interrupt
 rescue Exception => e
 	Kernel.warn("Uh oh, Caught an Exception:\n#{' ' * 4}#{e}\n#{'-' * (e.to_s.length + 4)}\nError Details:\n#{' ' * 4}#{e.backtrace.join("\n" + ' ' * 4)}\n")
 end
