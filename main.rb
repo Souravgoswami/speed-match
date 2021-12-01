@@ -12,15 +12,15 @@ STDOUT.sync = true
 ::Dir.mkdir(::File.join(PATH, 'data')) unless ::Dir.exist?(::File.join(PATH, 'data'))
 
 module Ruby2D
-	def change_colour=(colour) self.opacity, self.color = opacity, colour end
+	def change_colour=(colour) self.color = colour end
 
 	def opacify(step = 0.05, threshold = 0.5)
-		self.opacity -= step if opacity > threshold
+		self.color.opacity -= step if self.color.opacity > threshold
 		itself
 	end
 
 	def illuminate(step = 0.05, threshold = 1)
-		self.opacity += step if opacity < threshold
+		self.color.opacity += step if self.color.opacity < threshold
 		itself
 	end
 end
@@ -36,7 +36,7 @@ def main()
 	$t = ->(format='%s') { Time.new.strftime(format) }
 	$generate_image = ->(image_set) {
 		image = Image.new(File.join(PATH, 'shapes', "#{image_set.sample}.png"))
-		image.x, image.y, image.opacity = $width, $height / 2 - image.height / 1.5, 0.5
+		image.x, image.y, image.color.opacity = $width, $height / 2 - image.height / 1.5, 0.5
 		items.push(image)
 	}
 
@@ -65,22 +65,25 @@ def main()
 	instruction_text_touched = resume_button_touched = about_button_touched = power_touched = play_button2_touched = restart_touched = score_touched = time_touched = items_touched = false
 
 	sound_correct = Sound.new(File.join(PATH, 'sounds', '131662__bertrof__game-sound-correct-v2.wav'))
+	sound_correct.volume = 10
 	sound_wrong = Sound.new(File.join(PATH, 'sounds', '131657__bertrof__game-sound-wrong.wav'))
+	sound_wrong.volume = 10
+
 
 	correct = Image.new(File.join(PATH, 'images', 'correct.png'), width: $width / 10, height: $width / 10)
-	correct.x, correct.y, correct.opacity = $width / 2 - correct.width / 2, button_yes.y - correct.height - 5, 0
+	correct.x, correct.y, correct.color.opacity = $width / 2 - correct.width / 2, button_yes.y - correct.height - 5, 0
 
 	wrong = Image.new File.join(PATH, 'images', 'wrong.png'), width: $width / 10, height: $width / 10
-	wrong.x, wrong.y, wrong.opacity = $width/2 - wrong.width/2, button_yes.y - wrong.height - 5, 0
+	wrong.x, wrong.y, wrong.color.opacity = $width/2 - wrong.width/2, button_yes.y - wrong.height - 5, 0
 
 	pause = Image.new File.join(PATH, 'images', 'pause.png'), width: $width / 20, height: $width / 25, z: 12
 	pausetext = Text.new "Play/Pause\t", font: FONT,  x: pause.x + pause.width, y: pause.y, color: 'blue', z: 12
-	pausebox_touched, pause_clicked, pausetext.opacity = false, false, 0
+	pausebox_touched, pause_clicked, pausetext.color.opacity = false, false, 0
 	pausebox = Rectangle.new width: pause.width - 3, height: pause.height - 2, x: 1, y: 1, z: 11
 
 	pause_var = 0
 	pause_blur = Rectangle.new x: 0, y: 0, width: $width, height: $height, color: 'black', z: 10
-	pause_blur.opacity = 0.7
+	pause_blur.color.opacity = 0.7
 
 	resume_text = Text.new 'Play!', font: FONT, size: 100, z: pause_blur.z
 	resume_text.x, resume_text.y = pause_blur.x + pause_blur.width/2 - resume_text.width / 2, pause_blur.y + pause_blur.height / 2
@@ -139,16 +142,16 @@ def main()
 
 	on :mouse_up do |e|
 		pausebox.color, pause_clicked = '#FFFFFF', false
-		if (pausebox.contains?(e.x, e.y) and pausebox.opacity > 0.1) or \
-						(resume_text.contains?(e.x, e.y) and resume_text.opacity > 0.1) or \
-						(resume_button.contains?(e.x, e.y) and resume_button.opacity > 0.1) or \
-						(play_button2.contains?(e.x, e.y) and play_button2.opacity > 0.1)
+		if (pausebox.contains?(e.x, e.y) and pausebox.color.opacity > 0.1) or \
+						(resume_text.contains?(e.x, e.y) and resume_text.color.opacity > 0.1) or \
+						(resume_button.contains?(e.x, e.y) and resume_button.color.opacity > 0.1) or \
+						(play_button2.contains?(e.x, e.y) and play_button2.color.opacity > 0.1)
 		then
 			pause_var += 1
 			countdown = 0
 		end
 
-		close if power_button.contains?(e.x, e.y) and power_button.opacity > 0.1
+		close if power_button.contains?(e.x, e.y) and power_button.color.opacity > 0.1
 		Open3.pipeline_start("#{File.join(RbConfig::CONFIG['bindir'], 'ruby')} #{File.join(PATH, 'stats.rb')}") if about_button.contains?(e.x, e.y)
 		score, streak, i, pause_var, prev_item = 0, 0, 0.0, 1, '' if restart_button.contains?(e.x, e.y)
 	end
@@ -164,7 +167,7 @@ def main()
 	update do
 		unless pause_var % 2 == 0
 			beep.play if countdown % $fps == 0 and !started
-			counter_label.opacity = 1 if !started
+			counter_label.color.opacity = 1 if !started
 			countdown += 1
 
 			counter_label.text = case countdown/$fps
@@ -189,33 +192,33 @@ def main()
 			pausebox.width -= 10 if pausebox.width > pause.width - 3
 		end
 
-		if about_button_touched then about_button.g -= 0.08  if about_button.g > 0.5
-		else about_button.g += 0.08 if about_button.g < 1
+		if about_button_touched then about_button.color.g -= 0.08  if about_button.color.g > 0.5
+		else about_button.color.g += 0.08 if about_button.color.g < 1
 		end
 
-		if power_touched then power_button.g -= 0.08 if power_button.g > 0.5
-		else power_button.g += 0.08 if power_button.g < 1
+		if power_touched then power_button.color.g -= 0.08 if power_button.color.g > 0.5
+		else power_button.color.g += 0.08 if power_button.color.g < 1
 		end
 
-		if restart_touched then restart_button.g -= 0.08 if restart_button.g > 0.5
-		else restart_button.g += 0.08 if restart_button.g < 1
+		if restart_touched then restart_button.color.g -= 0.08 if restart_button.color.g > 0.5
+		else restart_button.color.g += 0.08 if restart_button.color.g < 1
 		end
 
-		if play_button2_touched then play_button2.g -= 0.08 if play_button2.g > 0.5
-		else play_button2.g += 0.08 if play_button2.g < 1
+		if play_button2_touched then play_button2.color.g -= 0.08 if play_button2.color.g > 0.5
+		else play_button2.color.g += 0.08 if play_button2.color.g < 1
 		end
 
 		if resume_text_touched or pausebox_touched or resume_button_touched or play_button2_touched
-			resume_button.b -= 0.08 if resume_button.b > 0
+			resume_button.color.b -= 0.08 if resume_button.color.b > 0
 		else
-			resume_button.b += 0.08 if resume_button.b < 1
+			resume_button.color.b += 0.08 if resume_button.color.b < 1
 		end
 
 		timer = 45.-((i)./($fps)).to_f.round(0)
 		if timer <= 0
 			File.open(File.join(PATH, 'data', 'data'), 'a+') { |file| file.puts(score.to_s.unpack('h*')[0]) }
 			started = false
-			instruction_text.text, instruction_text.opacity, instruction_text.z = "Game Over. Final Score\t #{score}. Click to show stat", 1, 12 unless instruction_text.z == 1
+			instruction_text.text, instruction_text.color.opacity, instruction_text.z = "Game Over. Final Score\t #{score}. Click to show stat", 1, 12 unless instruction_text.z == 1
 			score, streak, pause_var, prev_item = 0, 0, 0, ''
 			i = 0.0
 		end
@@ -279,7 +282,7 @@ def main()
 
 			if button_yes_touched
 				button_yes.opacify
-	 			yes_text.b += 0.15 if yes_text.b < 1
+				yes_text.color.b += 0.15 if yes_text.color.b < 1
 			else
 				button_yes.illuminate
 				yes_text.color = [0.8, 0.8, 0.3, 1]
@@ -287,7 +290,7 @@ def main()
 
 			if button_no_touched
 				button_no.opacify
-	 			no_text.b += 0.15 if yes_text.b < 1
+				no_text.color.b += 0.15 if yes_text.color.b < 1
 			else
 				button_no.illuminate
 				no_text.color = [0.8, 0.8, 0.3, 1]
@@ -299,12 +302,12 @@ def main()
 				yes_text.color = '#FF0000'
 				if prev_item == current_item
 					streak += 1
-					correct.opacity = 1
+					correct.color.opacity = 1
 					score += 1 * streak
 					sound_correct.play
 				else
 					streak = 0
-					wrong.opacity = 1
+					wrong.color.opacity = 1
 					sound_wrong.play
 					score -= 1 * streak
 				end
@@ -317,12 +320,12 @@ def main()
 				unless prev_item == current_item
 					streak += 1
 					score += 1 * streak
-					correct.opacity = 1
+					correct.color.opacity = 1
 					sound_correct.play
 				else
 					streak = 0
 					score -= 1 * streak
-					wrong.opacity = 1
+					wrong.color.opacity = 1
 					sound_wrong.play
 				end
 			end
@@ -330,7 +333,7 @@ def main()
 			if pressed
 				items.each do |val|
 					val.x -= $width/10.0
-					val.opacity -= 0.2
+					val.color.opacity -= 0.2
 					val.rotate -= 15
 
 					if val.x <= -val.width
